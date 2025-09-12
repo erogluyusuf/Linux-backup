@@ -73,7 +73,8 @@ Adım Adım Kurulum
    **Arayüze Erişin:**
    
    Web tarayıcınızı açın ve ''' http://<sunucu_ipsi>:5000 ''' adresine gidin. Artık paneli kullanmaya başlayabilirsiniz!
-   
+   [Uygulamaya Git](http://<sunucu_ipsi>:5000)
+
 🛠️ Kullanılan Teknolojiler
 
   - Backend: Python / Flask
@@ -89,10 +90,11 @@ Adım Adım Kurulum
 🖼️ Ekran Görüntüleri
 
 Yedekleme Paneli:
-[Yedekleme Paneli Görüntüsü]
+![DicBackup Ekran Görüntüsü](https://github.com/erogluyusuf/Linux-backup/blob/main/dicbacakup.png)
 
 FTP İstemcisi:
-[FTP İstemcisi Görüntüsü]
+![DicBackup Ekran Görüntüsü](https://github.com/erogluyusuf/Linux-backup/blob/main/dicbacakupftp.png)
+
 📄 Lisans
 
 Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için LICENSE dosyasına bakınız.
