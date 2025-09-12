@@ -1,0 +1,30 @@
+# 📦 Linux Backup Script
+
+Bu script, Linux üzerinde kolayca **yedekleme** yapabilmen için tasarlanmıştır.  
+Elle veya otomatik (cron) zamanlamalı olarak çalıştırılabilir.  
+
+---
+
+## 🚀 Özellikler
+- **Kaynak dizini** kullanıcıdan alır.  
+- **Hedef dizin seçenekleri**:
+  1. Bulunduğun dizin  
+  2. Kullanıcı tarafından girilen dizin  
+  3. Bağlı depolama birimlerinden seçme  
+- Kaynak dizinden otomatik **ID** oluşturur.  
+- ID’ye ait klasör yoksa otomatik oluşturur.  
+- **Eski yedekleri temizler**, sadece en güncel olanı saklar.  
+- Yedekleme sırasında **ilerleme durumu (pv)** gösterir.  
+- **Log kaydı** tutar.  
+- İsteğe bağlı **otomatik yedekleme planlama**:
+  - Kaç saatte bir yedek alınacağı kullanıcıdan alınır.  
+  - Ayarlar `~/.backup_scheduler.conf` dosyasında saklanır.  
+  - Script çalıştırıldığında süre dolmamışsa yeni yedek alınmaz.  
+
+---
+
+## ⚡ Kurulum
+```bash
+git clone https://github.com/kullaniciadi/backup-script.git
+cd backup-script
+chmod +x backup.sh
