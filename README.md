@@ -97,4 +97,4 @@ FTP İstemcisi:
 
 📄 Lisans
 
-Bu proje MIT Lisansı altında lisanslanmıştır. Detaylar için LICENSE dosyasına bakınız.
+Bu proje MIT Lisansı altında lisanslanmıştır.
