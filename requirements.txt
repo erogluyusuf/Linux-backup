@@ -1,0 +1,4 @@
+Flask
+psutil
+APScheduler
+SQLAlchemy

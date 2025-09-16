@@ -1,0 +1,316 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+    <meta charset="UTF-8">
+    <title>FTP İstemcisi - Yedekleme Arayüzü</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary-blue: #4facfe; --dark-blue: #0a192f; --content-bg: #112240; --sidebar-bg: #0a192f;
+            --card-bg: #1d3b69; --card-hover-bg: #2a5298; --text-light: #ccd6f6; --text-dark: #8892b0;
+            --success: #28a745; --danger: #dc3545; --warning: #ffc107;
+        }
+        body { margin: 0; font-family: 'Poppins', sans-serif; background: var(--dark-blue); color: var(--text-light); font-weight: 300; }
+        .sidebar { width: 240px; height: 100vh; background: var(--sidebar-bg); position: fixed; top: 0; left: 0; padding-top: 25px; border-right: 1px solid rgba(136, 146, 176, 0.1); z-index: 10; }
+        .sidebar .logo { text-align: center; color: var(--primary-blue); margin-bottom: 50px; font-size: 24px; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 10px; }
+        .sidebar a { display: flex; align-items: center; gap: 15px; padding: 18px 25px; color: var(--text-dark); text-decoration: none; transition: all 0.3s ease; font-weight: 400; }
+        .sidebar a:hover, .sidebar a.active { background: rgba(79, 172, 254, 0.1); color: var(--primary-blue); border-left: 3px solid var(--primary-blue); padding-left: 22px; }
+        .sidebar a svg { width: 20px; height: 20px; stroke-width: 1.5; }
+        .content { margin-left: 240px; padding: 40px; background: var(--content-bg); min-height: calc(100vh - 80px); }
+        h1 { font-size: 32px; font-weight: 600; margin-bottom: 10px; }
+        .subtitle { font-size: 16px; color: var(--text-dark); margin-bottom: 40px; }
+        
+        /* FTP'ye özel stiller */
+        .ftp-client { display: flex; flex-direction: column; gap: 15px; height: calc(100vh - 170px); }
+        .ftp-connect-form { display: flex; flex-wrap: wrap; gap: 10px; align-items: flex-end; }
+        .ftp-connect-form .form-group { flex: 1; min-width: 150px; }
+        .ftp-connect-form button { margin-bottom: 0; white-space: nowrap; padding: 12px 20px; border: 1px solid var(--primary-blue); border-radius: 6px; background: transparent; color: var(--primary-blue); font-weight: 500; font-family: 'Poppins', sans-serif; cursor: pointer; transition: all 0.3s ease; }
+        .ftp-connect-form button:hover:not(:disabled) { background: rgba(79, 172, 254, 0.1); }
+        .ftp-connect-form button:disabled { opacity: 0.5; cursor: not-allowed; }
+        .form-group { display: flex; flex-direction: column; gap: 5px; }
+        .form-group label { color: var(--text-dark); font-size: 13px; }
+        .form-group input { background: var(--dark-blue); color: var(--text-light); border: 1px solid var(--card-bg); padding: 10px; border-radius: 6px; font-family: 'Poppins', sans-serif; font-size: 14px; }
+        .ftp-status-log { background: var(--dark-blue); border: 1px solid var(--card-bg); padding: 10px; border-radius: 6px; height: 120px; overflow-y: auto; font-family: monospace; font-size: 13px; color: var(--text-dark); }
+        .ftp-status-log p { margin: 0 0 5px 0; }
+        .ftp-status-log .success { color: var(--success); }
+        .ftp-status-log .error { color: var(--danger); }
+        .ftp-status-log .info { color: var(--primary-blue); }
+        .ftp-panels { display: grid; grid-template-columns: 1fr 1fr; gap: 15px; flex-grow: 1; overflow: hidden; }
+        .ftp-panel { display: flex; flex-direction: column; background: var(--dark-blue); border-radius: 6px; border: 1px solid var(--card-bg); overflow: hidden; transition: border-color 0.2s; }
+        .ftp-panel-header { display: flex; align-items: center; justify-content: space-between; padding: 12px; background: var(--card-bg); font-weight: 500; }
+        .ftp-panel-header span { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .new-folder-btn { background: none; border: 1px solid var(--primary-blue); color: var(--primary-blue); padding: 5px 10px; border-radius: 4px; cursor: pointer; transition: all 0.2s; font-size: 12px; display: flex; align-items: center; gap: 5px; }
+        .new-folder-btn:hover:not(:disabled) { background: rgba(79, 172, 254, 0.1); }
+        .new-folder-btn:disabled { opacity: 0.5; cursor: not-allowed; }
+        .ftp-file-list { list-style: none; padding: 0; margin: 0; overflow-y: auto; flex-grow: 1; }
+        .ftp-file-list li { padding: 8px 12px; display: flex; align-items: center; gap: 8px; cursor: pointer; border-bottom: 1px solid var(--card-bg); transition: background-color 0.2s ease; }
+        .ftp-file-list li:hover { background-color: var(--card-hover-bg); }
+        .ftp-file-list li[draggable="true"]:hover { cursor: grab; }
+        .ftp-file-list li svg { width: 16px; height: 16px; color: var(--primary-blue); flex-shrink: 0; }
+        .ftp-panel.drag-over { border-color: var(--primary-blue); }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="logo">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path><polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline><line x1="12" y1="22.08" x2="12" y2="12"></line></svg>
+            <span>DicBackup</span>
+        </div>
+        <a href="{{ url_for('index') }}">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24" fill="none" stroke="currentColor" stroke-linecap="round" stroke-linejoin="round"><path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"></path></svg>
+            Yedekleme
+        </a>
+        <a href="{{ url_for('ftp_page') }}" class="active">
+            <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 17l5-5-5-5M19.8 12H9M10 3H4v18h6"/></svg>
+            FTP İstemcisi
+        </a>
+    </div>
+    <div class="content">
+        <h1>FTP İstemcisi</h1>
+        <p class="subtitle">Uzak sunucunuza bağlanarak dosyalarınızı yönetin. Klasörlere çift tıklayarak gezinin, dosya ve klasörleri paneller arasında sürükleyip bırakın.</p>
+        <div class="ftp-client">
+            <form id="ftp-connect-form" class="ftp-connect-form" onsubmit="return false;">
+                <div class="form-group"><label>Sunucu</label><input type="text" name="host" placeholder="ftp.example.com" required></div>
+                <div class="form-group"><label>Kullanıcı Adı</label><input type="text" name="user" placeholder="kullanici" required></div>
+                <div class="form-group"><label>Şifre</label><input type="password" name="pass" placeholder="••••••••"></div>
+                <div class="form-group" style="flex: 0.5;"><label>Port</label><input type="number" name="port" value="21" required></div>
+                <button type="submit" id="ftp-connect-btn">Bağlan</button>
+                <button type="button" id="ftp-disconnect-btn" style="display:none;">Bağlantıyı Kes</button>
+            </form>
+            <div class="ftp-status-log" id="ftp-status-log"><p>Bağlantı bekleniyor...</p></div>
+            <div class="ftp-panels">
+                <div class="ftp-panel" id="local-panel">
+                    <div class="ftp-panel-header"><span>Yerel Site: <span id="local-path-display"></span></span></div>
+                    <ul class="ftp-file-list" id="local-files"></ul>
+                </div>
+                <div class="ftp-panel" id="remote-panel">
+                    <div class="ftp-panel-header">
+                        <span>Uzak Site: <span id="remote-path-display"></span></span>
+                        <button class="new-folder-btn" id="new-folder-btn" title="Yeni Klasör Oluştur" disabled>
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+                            Yeni Klasör
+                        </button>
+                    </div>
+                    <ul class="ftp-file-list" id="remote-files"></ul>
+                </div>
+            </div>
+        </div>
+    </div>
+<script>
+document.addEventListener('DOMContentLoaded', () => {
+    const connectForm = document.getElementById('ftp-connect-form');
+    const connectBtn = document.getElementById('ftp-connect-btn');
+    const disconnectBtn = document.getElementById('ftp-disconnect-btn');
+    const statusLog = document.getElementById('ftp-status-log');
+    const localFileList = document.getElementById('local-files');
+    const remoteFileList = document.getElementById('remote-files');
+    const localPathDisplay = document.getElementById('local-path-display');
+    const remotePathDisplay = document.getElementById('remote-path-display');
+    const newFolderBtn = document.getElementById('new-folder-btn');
+    const localPanel = document.getElementById('local-panel');
+    const remotePanel = document.getElementById('remote-panel');
+    
+    let currentLocalPath = '';
+    let currentRemotePath = '.';
+    let isConnected = false;
+    let localRoot = ''; // Yerel kök dizini saklamak için
+
+    const folderIcon = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 7v10a2 2 0 002 2h14a2 2 0 002-2V9a2 2 0 00-2-2h-6l-2-2H5a2 2 0 00-2 2z"></path></svg>`;
+    const fileIcon = `<svg fill="none" stroke="currentColor" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 21h10a2 2 0 002-2V9.414a1 1 0 00-.293-.707l-5.414-5.414A1 1 0 0012.586 3H7a2 2 0 00-2 2v14a2 2 0 002 2z"></path></svg>`;
+
+    function logStatus(message, type = 'info') {
+        const p = document.createElement('p');
+        p.className = type;
+        p.textContent = `[${new Date().toLocaleTimeString()}] ${message}`;
+        statusLog.appendChild(p);
+        statusLog.scrollTop = statusLog.scrollHeight;
+    }
+
+    function renderFileList(listElement, files) {
+        listElement.innerHTML = '';
+        const parentLi = document.createElement('li');
+        parentLi.innerHTML = `${folderIcon} .. (Üst Dizin)`;
+        parentLi.dataset.type = 'parent';
+        listElement.appendChild(parentLi);
+
+        files.sort((a, b) => {
+            if (a.type === b.type) return a.name.localeCompare(b.name);
+            return a.type === 'dir' || a.type === 'pdir' ? -1 : 1;
+        }).forEach(file => {
+            if (file.name === '.' || file.name === '..') return;
+            const li = document.createElement('li');
+            li.innerHTML = `${file.type.includes('dir') ? folderIcon : fileIcon} ${file.name}`;
+            li.dataset.name = file.name;
+            li.dataset.type = file.type;
+            if (file.type.includes('file') || file.type.includes('dir')) {
+                li.draggable = true;
+            }
+            listElement.appendChild(li);
+        });
+    }
+
+    async function fetchLists(remoteP = currentRemotePath, localP = currentLocalPath) {
+        if (!isConnected) return;
+        logStatus('Dosya listeleri yenileniyor...', 'info');
+        try {
+            const response = await fetch('/ftp-list', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ remote_path: remoteP, local_path: localP })
+            });
+            const data = await response.json();
+            if (data.status === 'success') {
+                currentRemotePath = data.remote_path;
+                currentLocalPath = data.local_path;
+                if (!localRoot) localRoot = data.local_path;
+                remotePathDisplay.textContent = currentRemotePath;
+                localPathDisplay.textContent = currentLocalPath;
+                renderFileList(remoteFileList, data.remote_files);
+                renderFileList(localFileList, data.local_files);
+                logStatus('Dosya listeleri başarıyla alındı.', 'success');
+            } else {
+                logStatus(`Hata: ${data.message}`, 'error');
+            }
+        } catch (e) {
+            logStatus(`Ağ hatası: ${e}`, 'error');
+        }
+    }
+
+    connectForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        logStatus('Bağlanılıyor...', 'info');
+        connectBtn.disabled = true;
+        const data = Object.fromEntries(new FormData(connectForm).entries());
+        try {
+            const response = await fetch('/ftp-connect', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (result.status === 'success') {
+                isConnected = true; newFolderBtn.disabled = false;
+                logStatus(`Bağlantı başarılı: ${result.message}`, 'success');
+                connectBtn.style.display = 'none';
+                disconnectBtn.style.display = 'inline-block';
+                await fetchLists();
+            } else {
+                isConnected = false; logStatus(`Bağlantı hatası: ${result.message}`, 'error');
+            }
+        } catch (err) {
+            isConnected = false; logStatus(`Kritik hata: ${err}`, 'error');
+        } finally {
+            connectBtn.disabled = false;
+        }
+    });
+
+    disconnectBtn.addEventListener('click', async () => {
+        await fetch('/ftp-disconnect', { method: 'POST' });
+        isConnected = false; newFolderBtn.disabled = true;
+        logStatus('Bağlantı kesildi.', 'info');
+        connectBtn.style.display = 'inline-block';
+        disconnectBtn.style.display = 'none';
+        remoteFileList.innerHTML = ''; localFileList.innerHTML = '';
+        remotePathDisplay.textContent = ''; localPathDisplay.textContent = '';
+    });
+    
+    newFolderBtn.addEventListener('click', async () => {
+        const newDirName = prompt("Oluşturulacak klasörün adını girin:");
+        if (newDirName && isConnected) {
+            logStatus(`'${newDirName}' klasörü oluşturuluyor...`, 'info');
+            const response = await fetch('/ftp-create-directory', {
+                method: 'POST', headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ dir_name: newDirName, remote_path: currentRemotePath })
+            });
+            const result = await response.json();
+            logStatus(result.message, result.status);
+            if (result.status === 'success') await fetchLists();
+        }
+    });
+
+    [localFileList, remoteFileList].forEach(list => {
+        list.addEventListener('dblclick', async (e) => {
+            const li = e.target.closest('li');
+            if (!li || !isConnected) return;
+            const { name, type } = li.dataset;
+            const isRemote = list.id === 'remote-files';
+            
+            if (type && (type.includes('dir') || type === 'parent')) {
+                let newPath;
+                const currentPath = isRemote ? currentRemotePath : currentLocalPath;
+
+                if (type === 'parent') {
+                    if ((isRemote && currentPath === '/') || (!isRemote && currentPath === localRoot)) return;
+                    newPath = currentPath.substring(0, currentPath.lastIndexOf('/')) || (isRemote ? '/' : localRoot);
+                } else {
+                    newPath = (currentPath === '/') ? `/${name}` : `${currentPath}/${name}`;
+                }
+                
+                if (isRemote) await fetchLists(newPath, currentLocalPath);
+                else await fetchLists(currentRemotePath, newPath);
+            }
+        });
+    });
+
+    let draggedItem = null;
+    document.addEventListener('dragstart', (e) => {
+        const li = e.target.closest('li');
+        if (li && li.draggable) { draggedItem = li; }
+    });
+    
+    [localPanel, remotePanel].forEach(panel => {
+        panel.addEventListener('dragover', e => { e.preventDefault(); panel.classList.add('drag-over'); });
+        panel.addEventListener('dragleave', e => { panel.classList.remove('drag-over'); });
+        panel.addEventListener('drop', async (e) => {
+            e.preventDefault();
+            panel.classList.remove('drag-over');
+            if (!draggedItem || !isConnected) return;
+
+            const itemName = draggedItem.dataset.name;
+            const itemType = draggedItem.dataset.type;
+            const sourceIsRemote = draggedItem.closest('#remote-files');
+            const targetIsRemote = panel.id === 'remote-panel';
+            
+            let endpoint, payload, confirmationMessage;
+            const isDownload = sourceIsRemote && !targetIsRemote;
+            const isUpload = !sourceIsRemote && targetIsRemote;
+
+            if (itemType.includes('file')) {
+                if (isDownload) {
+                    endpoint = '/ftp-download';
+                    payload = { filename: itemName, remote_path: currentRemotePath, local_path: currentLocalPath };
+                    confirmationMessage = `'${itemName}' dosyasını indirmek istediğinizden emin misiniz?`;
+                } else if (isUpload) {
+                    endpoint = '/ftp-upload';
+                    payload = { filename: itemName, remote_path: currentRemotePath, local_path: currentLocalPath };
+                    confirmationMessage = `'${itemName}' dosyasını yüklemek istediğinizden emin misiniz?`;
+                }
+            } else if (itemType.includes('dir')) {
+                 if (isDownload) {
+                    endpoint = '/ftp-download-folder';
+                    payload = { foldername: itemName, remote_path: currentRemotePath, local_path: currentLocalPath };
+                    confirmationMessage = `'${itemName}' klasörünü ve tüm içeriğini indirmek istediğinizden emin misiniz? Bu işlem uzun sürebilir.`;
+                } else if (isUpload) {
+                    endpoint = '/ftp-upload-folder';
+                    payload = { foldername: itemName, remote_path: currentRemotePath, local_path: currentLocalPath };
+                    confirmationMessage = `'${itemName}' klasörünü ve tüm içeriğini yüklemek istediğinizden emin misiniz? Bu işlem uzun sürebilir.`;
+                }
+            }
+
+            if (endpoint && confirm(confirmationMessage)) {
+                logStatus(`'${itemName}' transferi başlıyor...`, 'info');
+                const res = await fetch(endpoint, { 
+                    method: 'POST', 
+                    headers: { 'Content-Type': 'application/json' }, 
+                    body: JSON.stringify(payload) 
+                });
+                const result = await res.json();
+                logStatus(result.message, result.status);
+                if (result.status === 'success') await fetchLists();
+            }
+        });
+    });
+});
+</script>
+</body>
+</html>
+
